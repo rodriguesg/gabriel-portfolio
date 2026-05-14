@@ -1,16 +1,17 @@
 # ─────────────────────────────────────────────
-# Route 53
+# Route 53 — only created when domain_name is set
+# The hosted zone must already exist in your AWS account
 # ─────────────────────────────────────────────
 
-# Lookup the hosted zone (must already exist in your AWS account)
 data "aws_route53_zone" "portfolio" {
+  count        = var.domain_name != "" ? 1 : 0
   name         = var.domain_name
   private_zone = false
 }
 
-# Apex domain A record → CloudFront (IPv4)
 resource "aws_route53_record" "apex_ipv4" {
-  zone_id = data.aws_route53_zone.portfolio.zone_id
+  count   = var.domain_name != "" ? 1 : 0
+  zone_id = one(data.aws_route53_zone.portfolio[*].zone_id)
   name    = var.domain_name
   type    = "A"
 
@@ -21,9 +22,9 @@ resource "aws_route53_record" "apex_ipv4" {
   }
 }
 
-# Apex domain AAAA record → CloudFront (IPv6)
 resource "aws_route53_record" "apex_ipv6" {
-  zone_id = data.aws_route53_zone.portfolio.zone_id
+  count   = var.domain_name != "" ? 1 : 0
+  zone_id = one(data.aws_route53_zone.portfolio[*].zone_id)
   name    = var.domain_name
   type    = "AAAA"
 
@@ -34,10 +35,9 @@ resource "aws_route53_record" "apex_ipv6" {
   }
 }
 
-# www subdomain A record → CloudFront (IPv4)
 resource "aws_route53_record" "www_ipv4" {
-  count   = var.subdomain != "" ? 1 : 0
-  zone_id = data.aws_route53_zone.portfolio.zone_id
+  count   = var.domain_name != "" && var.subdomain != "" ? 1 : 0
+  zone_id = one(data.aws_route53_zone.portfolio[*].zone_id)
   name    = local.full_domain
   type    = "A"
 
@@ -48,10 +48,9 @@ resource "aws_route53_record" "www_ipv4" {
   }
 }
 
-# www subdomain AAAA record → CloudFront (IPv6)
 resource "aws_route53_record" "www_ipv6" {
-  count   = var.subdomain != "" ? 1 : 0
-  zone_id = data.aws_route53_zone.portfolio.zone_id
+  count   = var.domain_name != "" && var.subdomain != "" ? 1 : 0
+  zone_id = one(data.aws_route53_zone.portfolio[*].zone_id)
   name    = local.full_domain
   type    = "AAAA"
 

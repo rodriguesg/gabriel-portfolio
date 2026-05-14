@@ -3,17 +3,18 @@
 # ─────────────────────────────────────────────
 
 locals {
-  bucket_name  = "${var.domain_name}-portfolio-${var.environment}"
-  full_domain  = var.subdomain != "" ? "${var.subdomain}.${var.domain_name}" : var.domain_name
+  # Bucket name is always owner-based so it never changes when domain is added/removed
+  _owner_slug  = lower(replace(var.owner_name, " ", "-"))
+  bucket_name  = "${local._owner_slug}-portfolio-${var.environment}"
+  full_domain  = var.domain_name != "" ? (var.subdomain != "" ? "${var.subdomain}.${var.domain_name}" : var.domain_name) : ""
   s3_origin_id = "portfolio-s3-origin"
 }
 
 resource "aws_s3_bucket" "portfolio" {
   bucket        = local.bucket_name
-  force_destroy = var.environment != "production" # Only allow in non-prod
+  force_destroy = var.environment != "production"
 }
 
-# Block all public access — CloudFront will access via OAC
 resource "aws_s3_bucket_public_access_block" "portfolio" {
   bucket = aws_s3_bucket.portfolio.id
 
@@ -23,7 +24,6 @@ resource "aws_s3_bucket_public_access_block" "portfolio" {
   restrict_public_buckets = true
 }
 
-# Enable versioning for safe deploys / rollback
 resource "aws_s3_bucket_versioning" "portfolio" {
   bucket = aws_s3_bucket.portfolio.id
 
@@ -32,13 +32,13 @@ resource "aws_s3_bucket_versioning" "portfolio" {
   }
 }
 
-# Lifecycle: keep last 5 versions, expire non-current after 30 days
 resource "aws_s3_bucket_lifecycle_configuration" "portfolio" {
   bucket = aws_s3_bucket.portfolio.id
 
   rule {
     id     = "cleanup-old-versions"
     status = "Enabled"
+    filter {}
 
     noncurrent_version_expiration {
       noncurrent_days           = 30
@@ -47,7 +47,6 @@ resource "aws_s3_bucket_lifecycle_configuration" "portfolio" {
   }
 }
 
-# Server-side encryption at rest
 resource "aws_s3_bucket_server_side_encryption_configuration" "portfolio" {
   bucket = aws_s3_bucket.portfolio.id
 
@@ -59,7 +58,6 @@ resource "aws_s3_bucket_server_side_encryption_configuration" "portfolio" {
   }
 }
 
-# Logging bucket for S3 access logs
 resource "aws_s3_bucket" "logs" {
   bucket        = "${local.bucket_name}-logs"
   force_destroy = true
@@ -87,6 +85,7 @@ resource "aws_s3_bucket_lifecycle_configuration" "logs" {
   rule {
     id     = "expire-logs"
     status = "Enabled"
+    filter {}
 
     expiration {
       days = 90
@@ -94,7 +93,6 @@ resource "aws_s3_bucket_lifecycle_configuration" "logs" {
   }
 }
 
-# CloudFront Origin Access Control — modern OAC (replaces legacy OAI)
 resource "aws_cloudfront_origin_access_control" "portfolio" {
   name                              = "${local.bucket_name}-oac"
   description                       = "OAC for portfolio CloudFront → S3"
@@ -103,7 +101,6 @@ resource "aws_cloudfront_origin_access_control" "portfolio" {
   signing_protocol                  = "sigv4"
 }
 
-# Bucket policy: only allow CloudFront (via OAC) to read objects
 data "aws_iam_policy_document" "portfolio_s3" {
   statement {
     sid    = "AllowCloudFrontServicePrincipal"

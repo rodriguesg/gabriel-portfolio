@@ -1,8 +1,10 @@
 # ─────────────────────────────────────────────
-# ACM Certificate — must be us-east-1 for CloudFront
+# ACM Certificate — only created when domain_name is set
+# Must be us-east-1 for CloudFront
 # ─────────────────────────────────────────────
 
 resource "aws_acm_certificate" "portfolio" {
+  count    = var.domain_name != "" ? 1 : 0
   provider = aws.us_east_1
 
   domain_name               = var.domain_name
@@ -14,26 +16,27 @@ resource "aws_acm_certificate" "portfolio" {
   }
 }
 
-# Validate certificate via Route 53 DNS records
 resource "aws_route53_record" "acm_validation" {
-  for_each = {
-    for dvo in aws_acm_certificate.portfolio.domain_validation_options : dvo.domain_name => {
+  for_each = var.domain_name != "" ? {
+    for dvo in aws_acm_certificate.portfolio[0].domain_validation_options : dvo.domain_name => {
       name   = dvo.resource_record_name
       record = dvo.resource_record_value
       type   = dvo.resource_record_type
     }
-  }
+  } : {}
 
-  zone_id = data.aws_route53_zone.portfolio.zone_id
-  name    = each.value.name
-  type    = each.value.type
-  records = [each.value.record]
-  ttl     = 60
+  zone_id         = one(data.aws_route53_zone.portfolio[*].zone_id)
+  name            = each.value.name
+  type            = each.value.type
+  records         = [each.value.record]
+  ttl             = 60
+  allow_overwrite = true
 }
 
 resource "aws_acm_certificate_validation" "portfolio" {
+  count                   = var.domain_name != "" ? 1 : 0
   provider                = aws.us_east_1
-  certificate_arn         = aws_acm_certificate.portfolio.arn
+  certificate_arn         = aws_acm_certificate.portfolio[0].arn
   validation_record_fqdns = [for record in aws_route53_record.acm_validation : record.fqdn]
 }
 
@@ -41,47 +44,33 @@ resource "aws_acm_certificate_validation" "portfolio" {
 # CloudFront Cache Policies
 # ─────────────────────────────────────────────
 
-# Cache policy for assets (JS, CSS, images) — long TTL, immutable with hashed filenames
 resource "aws_cloudfront_cache_policy" "assets" {
   name        = "${local.bucket_name}-assets-cache"
   comment     = "Long TTL for hashed static assets"
   default_ttl = var.cache_ttl_default
-  max_ttl     = 31536000 # 1 year
+  max_ttl     = 31536000
   min_ttl     = 0
 
   parameters_in_cache_key_and_forwarded_to_origin {
-    cookies_config {
-      cookie_behavior = "none"
-    }
-    headers_config {
-      header_behavior = "none"
-    }
-    query_strings_config {
-      query_string_behavior = "none"
-    }
+    cookies_config { cookie_behavior = "none" }
+    headers_config { header_behavior = "none" }
+    query_strings_config { query_string_behavior = "none" }
     enable_accept_encoding_brotli = true
     enable_accept_encoding_gzip   = true
   }
 }
 
-# Cache policy for HTML — short TTL so new deploys propagate fast
 resource "aws_cloudfront_cache_policy" "html" {
   name        = "${local.bucket_name}-html-cache"
   comment     = "Short TTL for HTML documents"
   default_ttl = var.cache_ttl_html
-  max_ttl     = 3600 # 1 hour max
+  max_ttl     = 3600
   min_ttl     = 0
 
   parameters_in_cache_key_and_forwarded_to_origin {
-    cookies_config {
-      cookie_behavior = "none"
-    }
-    headers_config {
-      header_behavior = "none"
-    }
-    query_strings_config {
-      query_string_behavior = "none"
-    }
+    cookies_config { cookie_behavior = "none" }
+    headers_config { header_behavior = "none" }
+    query_strings_config { query_string_behavior = "none" }
     enable_accept_encoding_brotli = true
     enable_accept_encoding_gzip   = true
   }
@@ -94,46 +83,40 @@ resource "aws_cloudfront_cache_policy" "html" {
 resource "aws_cloudfront_distribution" "portfolio" {
   enabled             = true
   is_ipv6_enabled     = true
-  http_version        = "http2and3" # Enable HTTP/3 (QUIC) for best performance
-  comment             = "Portfolio distribution for ${local.full_domain}"
+  http_version        = "http2and3"
+  comment             = "Portfolio distribution — ${local.bucket_name}"
   default_root_object = "index.html"
   price_class         = var.cloudfront_price_class
-  aliases             = [var.domain_name, local.full_domain]
+  aliases             = var.domain_name != "" ? [var.domain_name, local.full_domain] : []
   wait_for_deployment = true
 
-  # S3 Origin via OAC
   origin {
     domain_name              = aws_s3_bucket.portfolio.bucket_regional_domain_name
     origin_id                = local.s3_origin_id
     origin_access_control_id = aws_cloudfront_origin_access_control.portfolio.id
   }
 
-  # Default cache behavior — serves HTML files
   default_cache_behavior {
-    allowed_methods        = ["GET", "HEAD", "OPTIONS"]
-    cached_methods         = ["GET", "HEAD"]
-    target_origin_id       = local.s3_origin_id
-    viewer_protocol_policy = "redirect-to-https"
-    compress               = true
-    cache_policy_id        = aws_cloudfront_cache_policy.html.id
-
-    # Security headers via CloudFront response headers policy
+    allowed_methods            = ["GET", "HEAD", "OPTIONS"]
+    cached_methods             = ["GET", "HEAD"]
+    target_origin_id           = local.s3_origin_id
+    viewer_protocol_policy     = "redirect-to-https"
+    compress                   = true
+    cache_policy_id            = aws_cloudfront_cache_policy.html.id
     response_headers_policy_id = aws_cloudfront_response_headers_policy.portfolio.id
   }
 
-  # Assets cache behavior — JS/CSS/images get long TTL
   ordered_cache_behavior {
-    path_pattern           = "/assets/*"
-    allowed_methods        = ["GET", "HEAD"]
-    cached_methods         = ["GET", "HEAD"]
-    target_origin_id       = local.s3_origin_id
-    viewer_protocol_policy = "redirect-to-https"
-    compress               = true
-    cache_policy_id        = aws_cloudfront_cache_policy.assets.id
+    path_pattern               = "/assets/*"
+    allowed_methods            = ["GET", "HEAD"]
+    cached_methods             = ["GET", "HEAD"]
+    target_origin_id           = local.s3_origin_id
+    viewer_protocol_policy     = "redirect-to-https"
+    compress                   = true
+    cache_policy_id            = aws_cloudfront_cache_policy.assets.id
     response_headers_policy_id = aws_cloudfront_response_headers_policy.portfolio.id
   }
 
-  # SPA routing — return index.html for 404/403 (React Router support)
   custom_error_response {
     error_code            = 403
     response_code         = 200
@@ -148,21 +131,19 @@ resource "aws_cloudfront_distribution" "portfolio" {
     error_caching_min_ttl = 10
   }
 
-  # SSL/TLS configuration
   viewer_certificate {
-    acm_certificate_arn      = aws_acm_certificate_validation.portfolio.certificate_arn
-    ssl_support_method       = "sni-only"
-    minimum_protocol_version = "TLSv1.2_2021"
+    acm_certificate_arn            = var.domain_name != "" ? one(aws_acm_certificate_validation.portfolio[*].certificate_arn) : null
+    cloudfront_default_certificate = var.domain_name == ""
+    ssl_support_method             = var.domain_name != "" ? "sni-only" : null
+    minimum_protocol_version       = var.domain_name != "" ? "TLSv1.2_2021" : "TLSv1"
   }
 
-  # Geo restriction — remove to serve globally
   restrictions {
     geo_restriction {
       restriction_type = "none"
     }
   }
 
-  # Access logging
   logging_config {
     include_cookies = false
     bucket          = aws_s3_bucket.logs.bucket_domain_name
@@ -184,12 +165,10 @@ resource "aws_cloudfront_response_headers_policy" "portfolio" {
     content_type_options {
       override = true
     }
-
     frame_options {
       frame_option = "DENY"
       override     = true
     }
-
     referrer_policy {
       referrer_policy = "strict-origin-when-cross-origin"
       override        = true
@@ -220,7 +199,6 @@ resource "aws_cloudfront_response_headers_policy" "portfolio" {
       value    = "camera=(), microphone=(), geolocation=()"
       override = true
     }
-
     items {
       header   = "X-Powered-By"
       value    = "AWS CloudFront"

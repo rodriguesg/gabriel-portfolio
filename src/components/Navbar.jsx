@@ -22,14 +22,14 @@ export default function Navbar({ activeSection, scrollY }) {
         </a>
 
         <ul className="nav-links">
-          {NAV_LINKS.map(({ href, label }) => (
+          {NAV_LINKS.map(({ href, label }, index) => (
             <li key={href}>
               <a
                 href={href}
                 className={`nav-link ${activeSection === href.slice(1) ? "active" : ""}`}
               >
                 <span className="link-num">
-                  {String(NAV_LINKS.indexOf({ href, label }) + 1).padStart(2, "0")}.
+                  {String(index + 1).padStart(2, "0")}.
                 </span>
                 {label}
               </a>

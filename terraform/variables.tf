@@ -16,9 +16,9 @@ variable "environment" {
 }
 
 variable "domain_name" {
-  description = "Your root domain name (e.g. yourname.dev)"
+  description = "Your root domain name (e.g. yourname.dev). Leave empty to use the CloudFront default URL."
   type        = string
-  # Example: "yourname.dev"
+  default     = ""
 }
 
 variable "subdomain" {
@@ -28,7 +28,7 @@ variable "subdomain" {
 }
 
 variable "owner_name" {
-  description = "Owner name for resource tagging"
+  description = "Owner name for resource tagging and bucket naming"
   type        = string
   default     = "portfolio-owner"
 }
@@ -36,13 +36,13 @@ variable "owner_name" {
 variable "cloudfront_price_class" {
   description = "CloudFront price class (PriceClass_All gives global coverage)"
   type        = string
-  default     = "PriceClass_100" # US, Canada, Europe — cheapest. Use PriceClass_All for global.
+  default     = "PriceClass_100"
 }
 
 variable "enable_waf" {
   description = "Enable AWS WAF on the CloudFront distribution"
   type        = bool
-  default     = false # Set to true to add WAF (adds cost)
+  default     = false
 }
 
 variable "cache_ttl_default" {
@@ -54,5 +54,5 @@ variable "cache_ttl_default" {
 variable "cache_ttl_html" {
   description = "Cache TTL for HTML files (shorter so deploys propagate fast)"
   type        = number
-  default     = 300 # 5 minutes
+  default     = 300
 }
