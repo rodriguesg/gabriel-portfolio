@@ -23,7 +23,7 @@ export default function Contact() {
 
   return (
     <div className="contact container" ref={ref}>
-      <p className="section-label reveal">06. contact</p>
+      <p className="section-label reveal">05. contact</p>
       <h2 className="section-title reveal">
         Let's <span className="accent">connect</span>
       </h2>
@@ -36,7 +36,7 @@ export default function Contact() {
         <div className="contact-left reveal">
           <div className="contact-channels">
             {[
-              { icon: "✉", label: "Email", value: "gabriel@email.com", href: "mailto:gabriel@email.com" },
+              { icon: "✉", label: "Email", value: "gabrielr_s@outlook.com", href: "mailto:gabrielr_s@outlook.com" },
               { icon: "in", label: "LinkedIn", value: "gabriel-rodrigues-de-souza", href: "https://www.linkedin.com/in/gabriel-rodrigues-de-souza-40a051110/" },
               { icon: "⌥", label: "GitHub", value: "github.com/rodriguesg", href: "https://github.com/rodriguesg" },
             ].map(ch => (
@@ -49,14 +49,6 @@ export default function Contact() {
                 <span className="channel-arrow">→</span>
               </a>
             ))}
-          </div>
-
-          <div className="avail-block">
-            <span className="glow-dot" />
-            <div>
-              <p className="avail-title">Available for opportunities</p>
-              <p className="avail-sub">Open to full-time, contract & consulting roles</p>
-            </div>
           </div>
         </div>
 

@@ -28,8 +28,8 @@ const SKILL_GROUPS = [
     skills: [
       { name: "Bash / Shell Scripting", level: 88 },
       { name: "JavaScript / HTML / CSS", level: 80 },
-      { name: "Mainframe / COBOL", level: 72 },
       { name: "Python", level: 78 },
+      { name: "SQL / Databases", level: 80 },
     ],
   },
   {
@@ -129,7 +129,7 @@ export default function Skills() {
         <span className="strip-label">also worked with</span>
         <div className="strip-tags">
           {["AWS Lambda", "API Gateway", "Terraform", "Docker", "Linux", "Bash",
-            "Git", "GitHub Actions", "ASP.NET", "SQL", "Cloud OnPremises", "Mainframe"].map(t => (
+            "Git", "GitHub Actions", "ASP.NET", "SQL", "Cloud OnPremises", "Postman"].map(t => (
             <span key={t} className="strip-tag">{t}</span>
           ))}
         </div>

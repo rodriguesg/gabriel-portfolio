@@ -155,7 +155,7 @@ export default function Hero() {
         </p>
 
         <div className="hero-actions">
-          <a href="#projects" className="btn btn-primary">ver meu trabalho →</a>
+          <a href="#experience" className="btn btn-primary">minha trajetória →</a>
           <a href="#contact" className="btn btn-ghost">entrar em contato</a>
           <a href="https://github.com/rodriguesg" className="btn btn-ghost" target="_blank" rel="noopener noreferrer">
             github ↗

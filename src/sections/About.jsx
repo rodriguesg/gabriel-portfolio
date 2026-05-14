@@ -57,10 +57,6 @@ export default function About() {
               </div>
               <div className="avatar-border" />
             </div>
-            <div className="avatar-badge">
-              <span className="glow-dot" />
-              <span>Available for hire</span>
-            </div>
           </div>
 
           <div className="about-facts">
