@@ -1,0 +1,17 @@
+# Copy this file to terraform.tfvars and fill in your values
+# terraform.tfvars is gitignored by default
+
+aws_region   = "us-east-1"
+environment  = "production"
+domain_name  = "yourname.dev"   # ← change this
+subdomain    = "www"
+owner_name   = "Gabriel Rodrigues"
+
+# PriceClass_100 → US/Canada/Europe (cheapest, ~$1-2/month for low traffic)
+# PriceClass_200 → + South America, Oceania, Asia
+# PriceClass_All → All edge locations globally
+cloudfront_price_class = "PriceClass_100"
+
+enable_waf       = false  # Set to true to add WAF (adds ~$5/month)
+cache_ttl_default = 86400 # 1 day for assets
+cache_ttl_html    = 300   # 5 minutes for HTML
